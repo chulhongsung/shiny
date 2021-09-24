@@ -11,9 +11,8 @@ if(!require(highcharter)) install.packages('highcharter'); library(highcharter)
 if(!require(DT)) install.packages('DT'); library(DT)
 if(!require(RcppRoll)) install.packages("RcppRoll"); library(RcppRoll)
 if(!require(data.table)) install.packages("data.table"); library(data.table)
+if(!require(leafpop)) install.packages("leafpop"); library(leafpop)
 # if(!require()) install.packages(""); library()
-# if(!require()) install.packages(""); library()
-
 install.packages("raster")
 install.packages("sf")
 install.packages("rgdal")
@@ -22,6 +21,8 @@ install.packages("rgeos")
 install.packages("maptools")
 install.packages("gpclib", type="source")
 
+mapview
+library(mapview)
 library(raster)
 library(sf)
 library(rgdal)
@@ -31,14 +32,13 @@ library(gpclib)
 
 
 setwd("~/Desktop/lab/새론솔루션/shiny/data")
-list.files()
+
 musu_kml = st_read("musu.kml")
 
 musu_kml_n <- st_zm(musu_kml[1], drop=T, what='ZM')
 as.data.frame(musu_kml_n) -> musu_kml.df
 as(musu_kml_n, "Spatial") -> polygon.musu
 
-crs(polygon.musu)
 # st_write(jkt_n, dsn= "jakarta", driver= "ESRI Shapefile",'jkt.shp')
 # ams_ll <- spTransform(polygon.musu, CRS("+init=epsg:4326"))
 heoijuk_kml = st_read("heoijuk.kml")
@@ -67,10 +67,6 @@ geumgok_marker3 = st_read("geumgok3.kml")
 geumgok_marker3_n <- st_zm(geumgok_marker3[1], drop=T, what='ZM')
 as.data.frame(geumgok_marker3_n) -> geumgok_marker3_n.df
 as(geumgok_marker3_n, "Spatial") -> marker.geumgok3
-
-str(geumgok_marker3_n.df)
-str(geumgok_marker3_n.df$geometry)
-
 
 geumgok_marker_df = rbind(marker.geumgok1, marker.geumgok2, marker.geumgok3)
 geumgok_marker_df$Name = c("금곡-상부", "금곡-중부", "금곡-하부")
@@ -115,6 +111,13 @@ musu_data = musu_data %>%
                  "heoijuk2" = "회죽-중부",
                  "heoijuk3" = "회죽-하부"
   ))
+
+img_path = c("https://user-images.githubusercontent.com/37679460/134656517-18af3ccd-b9c7-4d39-a142-b2ed3e856c16.png",
+  "https://user-images.githubusercontent.com/37679460/134656529-2369a5ed-527a-44ba-b144-c365af7c2c28.png",
+  "https://user-images.githubusercontent.com/37679460/134656536-e3811812-1563-430e-84a9-af08aadb67a1.png",
+  "https://user-images.githubusercontent.com/37679460/134656539-90f94786-958d-4db1-8daa-86d2ec1b09fa.png", 
+  "https://user-images.githubusercontent.com/37679460/134656543-85072195-9e2f-4565-8cc3-7f8e1282d67a.png",
+  "https://user-images.githubusercontent.com/37679460/134656546-6155f99e-5265-4974-8b05-3693e2024fe3.png")
 
 musu_data = within(musu_data, year_group <- factor(year_group, levels=c("2020", "2019", "과거 평년")))
 
@@ -165,6 +168,7 @@ body = dashboardBody(
   shinyDashboardThemes(
     theme = "purple_gradient"
   ),
+  ############ Home #############
   tabItems(
     tabItem(tabName = "Home",
             h3("저수지 상황"),
@@ -205,37 +209,28 @@ body = dashboardBody(
             ),
             fluidRow(
               column(
-                width=4,
+                width = 3,
                 offset = 1,
-                dateRangeInput(
-                  "water_rate_date",
-                  label= "Date range:",
-                  start = "2020-01-01",
-                  end = "2020-12-31",
-                  min = "2020-01-01",
-                  max ="2020-12-31"),
-                checkboxInput(
-                  'month_checkbox',
-                  "Month",
-                  FALSE)
+                dateRangeInput("water_rate_date", label= "Date range:", start = "2020-01-01", end = "2020-12-31", min = "2020-01-01", max ="2020-12-31")
               ),
               column(
-                width=4,
-                offset = 2,
-                dateRangeInput(
-                  "cum_flow_date",
-                  label= "Date range:",
-                  start = "2020-01-01",
-                  end = "2020-12-31",
-                  min = "2020-01-01",
-                  max ="2020-12-31"),
-                checkboxInput(
-                  'flow_month_checkbox',
-                  "Month",
-                  FALSE)
+                width = 2,
+                h4("월별 그래프"),
+                checkboxInput('month_checkbox', "Month", FALSE)
+              ),
+              column(
+                width = 3,
+                offset = 1,
+                dateRangeInput("cum_flow_date", label= "Date range:", start = "2020-01-01", end = "2020-12-31", min = "2020-01-01", max ="2020-12-31")
+              ), 
+              column(
+                width = 2,
+                h4("월별 그래프"),
+                checkboxInput('flow_month_checkbox', "Month", FALSE)
               )
             )
     ),
+    ########### Inform ############
     tabItem(tabName = "Information",
             fluidRow(
               tabBox(
@@ -247,6 +242,8 @@ body = dashboardBody(
               )
             )
     ),
+    
+    ############ Map #############
     tabItem(tabName = "Map",
       fluidPage(
         fluidRow(
@@ -430,7 +427,6 @@ server = function(input, output)
         hc_add_theme(hc_theme_superheroes())
     })
   })
-  
   
   observeEvent(input$month_checkbox, {
     cat("Month selectd! \n")
@@ -637,20 +633,50 @@ server = function(input, output)
   })
   
   
-  ### Map Tap
-  
-  output$map = renderLeaflet({
-  leaflet(options = leafletOptions(zoomControl = FALSE,  minZoom = 13, maxZoom = 13)) %>%
-    setView(lat = 36.96362, lng = 127.43329, zoom = 13) %>%
-    addProviderTiles("CartoDB.Positron", options= providerTileOptions(opacity = 0.99)) %>%
-    addPolygons(data = polygon.musu,
-                stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = '#0072B5'
-    ) %>%
-    addPolylines(data = path.geumgok, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#926AA6') %>%
-    addPolylines(data = path.heoijuk, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#264E36') %>%
-    addMarkers(data = geumgok_marker_df, layerId = ~Name, popup = ~htmlEscape(Name)) %>%
-    addMarkers(data = heoijuk_marker_df, layerId = ~Name, popup = ~htmlEscape(Name))
+  #### Map Tap #####
 
+  image_geumgok_path = paste0(getwd(), list.files("../image_file")[1:3])
+  image_heoijuk_path = paste0(getwd(), list.files("../image_file")[4:6])
+  
+  # output$map = renderLeaflet({
+  # leaflet(options = leafletOptions(zoomControl = FALSE,  minZoom = 13, maxZoom = 13)) %>%
+  #   setView(lat = 36.96362, lng = 127.43329, zoom = 13) %>%
+  #   addProviderTiles("CartoDB.Positron", options= providerTileOptions(opacity = 0.99)) %>%
+  #   addPolygons(data = polygon.musu,
+  #               stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = '#0072B5'
+  #   ) %>%
+  #   addPolylines(data = path.geumgok, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#926AA6') %>%
+  #   addPolylines(data = path.heoijuk, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#264E36') %>%
+  #   addAwesomeMarkers(data = geumgok_marker_df, layerId = ~Name, popup = paste(sep = '<br/>', ~htmlEscape(Name), popupImage(image_geumgok_path, "local"))) %>%
+  #   addAwesomeMarkers(data = heoijuk_marker_df, layerId = ~Name, popup = paste(sep = '<br/>', ~htmlEscape(Name), popupImage(image_heoijuk_path, "local")))
+  # 
+  # })
+  
+  # output$map = renderLeaflet({
+  #   leaflet(options = leafletOptions(zoomControl = FALSE,  minZoom = 13, maxZoom = 13)) %>%
+  #     setView(lat = 36.96362, lng = 127.43329, zoom = 13) %>%
+  #     addProviderTiles("CartoDB.Positron", options= providerTileOptions(opacity = 0.99)) %>%
+  #     addPolygons(data = polygon.musu,
+  #                 stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = '#0072B5'
+  #     ) %>%
+  #     addPolylines(data = path.geumgok, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#926AA6') %>%
+  #     addPolylines(data = path.heoijuk, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#264E36') %>%
+  #     addAwesomeMarkers(data = geumgok_marker_df, layerId = ~Name, popup = paste(sep = '<br/>', musu_area_coord_data$name[1:3], popupImage(img_path[1:3], width=100, height=100))) %>%
+  #     addAwesomeMarkers(data = heoijuk_marker_df, layerId = ~Name, popup = paste(sep = '<br/>', musu_area_coord_data$name[4:6], popupImage(img_path[4:6], width=100, height=100)))
+  #   
+  # })
+  output$map = renderLeaflet({
+    leaflet(options = leafletOptions(zoomControl = FALSE,  minZoom = 13, maxZoom = 13)) %>%
+      setView(lat = 36.96362, lng = 127.43329, zoom = 13) %>%
+      addProviderTiles("CartoDB.Positron", options= providerTileOptions(opacity = 0.99)) %>%
+      addPolygons(data = polygon.musu,
+                  stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = '#0072B5'
+      ) %>%
+      addPolylines(data = path.geumgok, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#926AA6') %>%
+      addPolylines(data = path.heoijuk, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#264E36') %>%
+      addAwesomeMarkers(data = geumgok_marker_df, layerId = ~Name, label = musu_area_coord_data$name[1:3], popup = popupImage(img_path[1:3], width=100, height=100)) %>%
+      addAwesomeMarkers(data = heoijuk_marker_df, layerId = ~Name, label = musu_area_coord_data$name[4:6], popup = popupImage(img_path[4:6], width=100, height=100))
+    
   })
   
   area_name = '회죽-상부'
@@ -676,11 +702,6 @@ server = function(input, output)
   observeEvent(input$map_marker_click,{
     
     cl$clickedMarker <- input$map_marker_click
-    print(area_name)
-    print(cl$clickedMarker)
-    print(input$map_marker_click)
-    print(class(cl$clickedMarker$lat))
-    print(c(cl$clickedMarker$lat, cl$clickedMarker$lng))
     output$click_area_flow_plot <- renderHighchart({
       highchart() %>%
         hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
