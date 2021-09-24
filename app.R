@@ -3,16 +3,101 @@ gc(reset = T)
 
 if(!require(shiny)) install.packages('shiny'); library(shiny)
 if(!require(shinydashboard)) install.packages('shinydashboard'); library(shinydashboard)
-if(!require(dplyr)) install.packages('dplyr'); library(dplyr)
+if(!require(tidyverse)) install.packages('tidyverse'); library(tidyverse)
 if(!require(plotly)) install.packages('plotly'); library(plotly)
 if(!require(leaflet)) install.packages('leaflet'); library(leaflet)
 if(!require(dashboardthemes)) install.packages("dashboardthemes"); library(dashboardthemes)
-if(!require(DT)) install.packages('DT'); library(DT)
 if(!require(highcharter)) install.packages('highcharter'); library(highcharter)
+if(!require(DT)) install.packages('DT'); library(DT)
+if(!require(RcppRoll)) install.packages("RcppRoll"); library(RcppRoll)
+if(!require(data.table)) install.packages("data.table"); library(data.table)
+# if(!require()) install.packages(""); library()
+# if(!require()) install.packages(""); library()
 
-setwd("C:/Users/chica/Desktop/rshiny/data")
+install.packages("raster")
+install.packages("sf")
+install.packages("rgdal")
+#install.packages("dplyr")
+install.packages("rgeos")
+install.packages("maptools")
+install.packages("gpclib", type="source")
 
-musu_data = readxl::read_xlsx('¹«¼öÀú¼öÁö µ¥ÀÌÅÍ¼Â.xlsx')
+library(raster)
+library(sf)
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(gpclib)
+
+
+setwd("~/Desktop/lab/ìƒˆë¡ ì†”ë£¨ì…˜/shiny/data")
+list.files()
+musu_kml = st_read("musu.kml")
+
+musu_kml_n <- st_zm(musu_kml[1], drop=T, what='ZM')
+as.data.frame(musu_kml_n) -> musu_kml.df
+as(musu_kml_n, "Spatial") -> polygon.musu
+
+crs(polygon.musu)
+# st_write(jkt_n, dsn= "jakarta", driver= "ESRI Shapefile",'jkt.shp')
+# ams_ll <- spTransform(polygon.musu, CRS("+init=epsg:4326"))
+heoijuk_kml = st_read("heoijuk.kml")
+
+heoijuk_kml_n <- st_zm(heoijuk_kml[1], drop=T, what='ZM')
+as.data.frame(heoijuk_kml_n) -> heoijuk_kml.df
+as(heoijuk_kml_n , "Spatial") -> path.heoijuk
+
+geumgok_kml = st_read("geumgok.kml")
+
+geumgok_kml_n <- st_zm(geumgok_kml[1], drop=T, what='ZM')
+as.data.frame(geumgok_kml_n) -> geumgok_kml.df
+as(geumgok_kml_n, "Spatial") -> path.geumgok
+
+geumgok_marker1 = st_read("geumgok1.kml")
+geumgok_marker1_n <- st_zm(geumgok_marker1[1], drop=T, what='ZM')
+as.data.frame(geumgok_marker1_n) -> geumgok_marker1_n.df
+as(geumgok_marker1_n, "Spatial") -> marker.geumgok1
+
+geumgok_marker2 = st_read("geumgok2.kml")
+geumgok_marker2_n <- st_zm(geumgok_marker2[1], drop=T, what='ZM')
+as.data.frame(geumgok_marker2_n) -> geumgok_marker2_n.df
+as(geumgok_marker2_n, "Spatial") -> marker.geumgok2
+
+geumgok_marker3 = st_read("geumgok3.kml")
+geumgok_marker3_n <- st_zm(geumgok_marker3[1], drop=T, what='ZM')
+as.data.frame(geumgok_marker3_n) -> geumgok_marker3_n.df
+as(geumgok_marker3_n, "Spatial") -> marker.geumgok3
+
+str(geumgok_marker3_n.df)
+str(geumgok_marker3_n.df$geometry)
+
+
+geumgok_marker_df = rbind(marker.geumgok1, marker.geumgok2, marker.geumgok3)
+geumgok_marker_df$Name = c("ê¸ˆê³¡-ìƒë¶€", "ê¸ˆê³¡-ì¤‘ë¶€", "ê¸ˆê³¡-í•˜ë¶€")
+
+heoijuk_marker1 = st_read("heoijuk1.kml")
+heoijuk_marker1_n <- st_zm(heoijuk_marker1[1], drop=T, what='ZM')
+as.data.frame(heoijuk_marker1_n) -> heoijuk_marker1_n.df
+as(heoijuk_marker1_n, "Spatial") -> marker.heoijuk1
+
+heoijuk_marker2 = st_read("heoijuk2.kml")
+heoijuk_marker2_n <- st_zm(heoijuk_marker2[1], drop=T, what='ZM')
+as.data.frame(heoijuk_marker2_n) -> heoijuk_marker2_n.df
+as(heoijuk_marker2_n, "Spatial") -> marker.heoijuk2
+
+heoijuk_marker3 = st_read("heoijuk3.kml")
+heoijuk_marker3_n <- st_zm(heoijuk_marker3[1], drop=T, what='ZM')
+as.data.frame(heoijuk_marker3_n) -> heoijuk_marker3_n.df
+as(heoijuk_marker3_n, "Spatial") -> marker.heoijuk3
+
+heoijuk_marker_df = rbind(marker.heoijuk1, marker.heoijuk2, marker.heoijuk3)
+
+heoijuk_marker_df$Name = c("íšŒì£½-ìƒë¶€", "íšŒì£½-ì¤‘ë¶€", "íšŒì£½-í•˜ë¶€")
+
+# setwd("C:/Users/chica/Desktop/rshiny/data")
+# data = fread("åê¾©ì¿‡_åª›ëº¤ë‹”?ì›¾_1999_2020.csv") %>% as_tibble()
+
+musu_data = readxl::read_xlsx('ë¬´ìˆ˜ì €ìˆ˜ì§€ ë°ì´í„°ì…‹.xlsx')
 
 colnames(musu_data) = c('date', 'amount', 'rate', 'geumgok1', 'geumgok2', 'geumgok3', 
                         'heoijuk1', 'heoijuk2', 'heoijuk3', 'temp', 'mois', 'sun', 'repi',
@@ -21,16 +106,22 @@ colnames(musu_data) = c('date', 'amount', 'rate', 'geumgok1', 'geumgok2', 'geumg
 
 musu_data = musu_data %>%
   mutate(y = format(date, '%Y'), md = format(date, '%m-%d'), month = format(date, '%m'), flow = geumgok1 + heoijuk1) %>%
-  mutate(year_group = if_else(y == '2020', '2020', '°ú°Å Æò³â')) %>% 
-  mutate(year_group = if_else(y == '2019', '2019', year_group))
+  mutate(year_group = if_else(y == '2020', '2020', 'ê³¼ê±° í‰ë…„')) %>% 
+  mutate(year_group = if_else(y == '2019', '2019', year_group)) %>% 
+  plyr::rename(c("geumgok1" = "ê¸ˆê³¡-ìƒë¶€", 
+                 "geumgok2" = "ê¸ˆê³¡-ì¤‘ë¶€", 
+                 "geumgok3" = "ê¸ˆê³¡-í•˜ë¶€",
+                 "heoijuk1" = "íšŒì£½-ìƒë¶€",
+                 "heoijuk2" = "íšŒì£½-ì¤‘ë¶€",
+                 "heoijuk3" = "íšŒì£½-í•˜ë¶€"
+  ))
 
-
-musu_data = within(musu_data, year_group <- factor(year_group, levels=c("2020", "2019", "°ú°Å Æò³â")))
+musu_data = within(musu_data, year_group <- factor(year_group, levels=c("2020", "2019", "ê³¼ê±° í‰ë…„")))
 
 cumflow_data = musu_data %>% 
   group_by(y) %>%
-  mutate_at(vars(geumgok1:heoijuk3, repi, flow), cumsum) %>% 
-  select(date, y, geumgok1:heoijuk3, repi, flow, md, month, year_group)
+  mutate_at(vars(`ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`, repi, flow), cumsum) %>% 
+  dplyr::select(date, y, `ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`, repi, flow, md, month, year_group)
 
 flow_data = musu_data %>% 
   group_by(year_group, month) %>%
@@ -39,15 +130,19 @@ flow_data = musu_data %>%
 
 musu_area_data = musu_data %>% 
   group_by(year_group, month) %>% 
-  summarise_at(vars(geumgok1:heoijuk3), mean) %>% 
+  summarise_at(vars(`ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`), mean) %>% 
   filter(month %in% c("04","05", "06", "07", "08", "09", "10")) 
-
-colnames(musu_area_data) = c('year_group', 'month', '±İ°î-»óºÎ', '±İ°î-ÁßºÎ', '±İ°î-ÇÏºÎ', 'È¸Á×-»óºÎ', 'È¸Á×-ÁßºÎ', 'È¸Á×-ÇÏºÎ')
 
 musu_area_data = musu_area_data %>% 
   gather(area, mean_flow, -year_group, -month)%>% 
   mutate(area_category = substr(area, 1, 2))
 
+musu_area_coord_data = data.frame(
+  name = c("ê¸ˆê³¡-ìƒë¶€",  "ê¸ˆê³¡-ì¤‘ë¶€", "ê¸ˆê³¡-í•˜ë¶€", "íšŒì£½-ìƒë¶€", "íšŒì£½-ì¤‘ë¶€", "íšŒì£½-í•˜ë¶€"),
+  lat = c(36.97453, 36.96241, 36.95053, 36.97362, 36.96496, 36.94749),
+  lng = c(127.43519, 127.43939, 127.44306, 127.42931, 127.42718, 127.42393)
+  )
+# musu_area_coord_data$lng = format(musu_area_coord_data$lng, digits = 8 )
 
 #### header ####
 header = dashboardHeader(title = 'Test dashboard')
@@ -72,103 +167,129 @@ body = dashboardBody(
   ),
   tabItems(
     tabItem(tabName = "Home",
-      h3("Àú¼öÁö »óÈ²"),
-      fluidRow(
-        column(width = 12,
-               valueBoxOutput("rate"),
-               valueBoxOutput("amount"),
-               valueBoxOutput("cum_flow"))
-      ),
-      fluidRow(
-        column(width=12,
-          valueBoxOutput("yesterday_rate"),
-          valueBoxOutput("yesterday_amount"),
-          valueBoxOutput("yesterday_cum_flow")
-        )
-      ),
-      fluidRow(
-        column(width = 6,
-           box(
-             width = 12,
-             h3('Àú¼öÀ²'),
-             status = 'primary',
-             highchartOutput(
-               'water_rate_plot'
-             )
-           )
-        ),
-        column(width = 6,
-           box(
-             width = 12,
-             h3('´©Àû À¯·®'),
-             status = 'primary',
-             highchartOutput(
-               'cumulative_flow_plot'
-             )
-           )
-       )
-      ),
-      fluidRow(
-        column(
-          width=4,
-          offset = 1,
-          dateRangeInput(
-            "water_rate_date",
-            label= "Date range:",
-            start = "2020-01-01",
-            end = "2020-08-31",
-            min = "2020-01-01",
-            max ="2020-08-31"),
-          checkboxInput(
-            'month_checkbox',
-            "Month",
-            FALSE)
-        ),
-        column(
-          width=4,
-          offset = 2,
-          dateRangeInput(
-            "cum_flow_date",
-            label= "Date range:",
-            start = "2020-01-01",
-            end = "2020-08-31",
-            min = "2020-01-01",
-            max ="2020-08-31"),
-          checkboxInput(
-            'flow_month_checkbox',
-            "Month",
-            FALSE)
-        )
-      )
+            h3("ì €ìˆ˜ì§€ ìƒí™©"),
+            fluidRow(
+              column(width = 12,
+                     valueBoxOutput("rate"),
+                     valueBoxOutput("amount"),
+                     valueBoxOutput("cum_flow"))
+            ),
+            fluidRow(
+              column(width=12,
+                     valueBoxOutput("yesterday_rate"),
+                     valueBoxOutput("yesterday_amount"),
+                     valueBoxOutput("yesterday_cum_flow")
+              )
+            ),
+            fluidRow(
+              column(width = 6,
+                     box(
+                       width = 12,
+                       h3('ì €ìˆ˜ìœ¨'),
+                       status = 'primary',
+                       highchartOutput(
+                         'water_rate_plot'
+                       )
+                     )
+              ),
+              column(width = 6,
+                     box(
+                       width = 12,
+                       h3('ëˆ„ì  ìœ ëŸ‰'),
+                       status = 'primary',
+                       highchartOutput(
+                         'cumulative_flow_plot'
+                       )
+                     )
+              )
+            ),
+            fluidRow(
+              column(
+                width=4,
+                offset = 1,
+                dateRangeInput(
+                  "water_rate_date",
+                  label= "Date range:",
+                  start = "2020-01-01",
+                  end = "2020-12-31",
+                  min = "2020-01-01",
+                  max ="2020-12-31"),
+                checkboxInput(
+                  'month_checkbox',
+                  "Month",
+                  FALSE)
+              ),
+              column(
+                width=4,
+                offset = 2,
+                dateRangeInput(
+                  "cum_flow_date",
+                  label= "Date range:",
+                  start = "2020-01-01",
+                  end = "2020-12-31",
+                  min = "2020-01-01",
+                  max ="2020-12-31"),
+                checkboxInput(
+                  'flow_month_checkbox',
+                  "Month",
+                  FALSE)
+              )
+            )
     ),
     tabItem(tabName = "Information",
-       fluidRow(
-         tabBox(
-           title = "Àú¼öÁö À¯·®",
-           side = "right",
-           selected = "À¯·®",
-           tabPanel("À¯·®", highchartOutput('monthly_flow_plot')),
-           tabPanel("´©Àû À¯·®", highchartOutput('monthly_cumflow_plot'))
-         )
-      ),
-      fluidRow(
-        tabBox(
-          title = "±İ°î°£¼± Áö¿ªº° À¯·®", 
-          side = "right",
-          height = "250px",
-          selected = "2020",
-          tabPanel("2020", highchartOutput('geumgok1_musu_area_plot')),
-          tabPanel("2019", highchartOutput('geumgok2_musu_area_plot')),
-          tabPanel("°ú°Å Æò³â", highchartOutput('geumgok3_musu_area_plot'))
+            fluidRow(
+              tabBox(
+                title = "ì €ìˆ˜ì§€ ìœ ëŸ‰",
+                side = "right",
+                selected = "ìœ ëŸ‰",
+                tabPanel("ìœ ëŸ‰", highchartOutput('monthly_flow_plot')),
+                tabPanel("ëˆ„ì  ìœ ëŸ‰", highchartOutput('monthly_cumflow_plot'))
+              )
+            )
+    ),
+    tabItem(tabName = "Map",
+      fluidPage(
+        fluidRow(
+          column(
+            width = 6,
+            tabBox(
+              width = 12,
+              title = "ê°„ì„  ì§€ì—­ë³„ ìœ ëŸ‰", 
+              side = "right",
+              height = "250px",
+              selected = "ìœ ëŸ‰",
+              tabPanel("ìœ ëŸ‰", highchartOutput('click_area_flow_plot')),
+              tabPanel("ëˆ„ì  ìœ ëŸ‰", highchartOutput('click_area_cumflow_plot'))
+            )
+          ),
+          column(
+            width = 6,
+            box(
+              width = 12,
+              status = 'primary',
+              leafletOutput('map', width = '100%', height = 550)  
+            )
+          )
         ),
-        tabBox(
-          title = "È¸Á×°£¼± Áö¿ªº° À¯·®",
-          side = "right",
-          height = "250px",
-          selected = "2020",
-          tabPanel("2020", highchartOutput('heoijuk1_musu_area_plot')),
-          tabPanel("2019", highchartOutput('heoijuk2_musu_area_plot')),
-          tabPanel("°ú°Å Æò³â", highchartOutput('heoijuk3_musu_area_plot'))
+        fluidRow(
+          tabBox(
+            title = "ê¸ˆê³¡ê°„ì„  ì§€ì—­ë³„ ìœ ëŸ‰", 
+            side = "right",
+            height = "250px",
+            selected = "2020",
+            tabPanel("2020", highchartOutput('geumgok1_musu_area_plot')),
+            tabPanel("2019", highchartOutput('geumgok2_musu_area_plot')),
+            tabPanel("ê³¼ê±° í‰ë…„", highchartOutput('geumgok3_musu_area_plot'))
+          ),
+          tabBox(
+            title = "íšŒì£½ê°„ì„  ì§€ì—­ë³„ ìœ ëŸ‰",
+            side = "right",
+            height = "250px",
+            selected = "2020",
+            tabPanel("2020", highchartOutput('heoijuk1_musu_area_plot')),
+            tabPanel("2019", highchartOutput('heoijuk2_musu_area_plot')),
+            tabPanel("ê³¼ê±° í‰ë…„", highchartOutput('heoijuk3_musu_area_plot'))
+          )
         )
       )
     )
@@ -180,18 +301,18 @@ server = function(input, output)
 {
   ### Reactive DATA
   tmp_musu_data = reactive({
-      musu_data %>% 
-        group_by(year_group, md) %>% 
-        summarise(amount = mean(amount), 
-                  rate = mean(rate))
+    musu_data %>% 
+      group_by(year_group, md) %>% 
+      summarise(amount = mean(amount), 
+                rate = mean(rate))
   })
   
   tmp_cumflow_data = reactive({
     cumflow_data %>% 
       group_by(year_group, md) %>% 
-      summarise_at(vars(geumgok1:heoijuk3, flow, repi), mean)
+      summarise_at(vars(`ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`, flow, repi), mean)
   })
-
+  
   spi_reactive = reactive({
     data %>%
       filter(date >= "2020-01-01") %>%
@@ -212,46 +333,70 @@ server = function(input, output)
   tmp_musu_area_data = reactive({
     musu_area_data
   })
-
+  
+  tmp_click_area_flow_data = reactive({
+    musu_data %>% 
+      dplyr::select(year_group, month, `ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`) %>% 
+      filter(month %in% c("04","05", "06", "07", "08", "09", "10")) %>% 
+      group_by(year_group, month) %>% 
+      summarise_all(mean) %>% 
+      gather(key = area, mean_flow, -year_group, -month)
+  })
+  
+  tmp_click_area_cumflow_data = reactive({
+    musu_data %>% 
+      dplyr::select(year_group, y, month, md,`ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`) %>% 
+      group_by(y) %>% 
+      mutate_at(vars(`ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`), cumsum) %>% 
+      ungroup() %>% 
+      group_by(year_group, md) %>% 
+      summarise_at(vars(`ê¸ˆê³¡-ìƒë¶€`:`íšŒì£½-í•˜ë¶€`), mean) %>%
+      gather(key = area, value = mean_flow, -year_group, -md)
+  })
+  
+  musu_area_coord_df = reactive({
+    musu_area_coord_data
+  })
+  
   ######## Tab Home ##########
   
   ### Value Box
   output$rate <- renderValueBox({
     valueBox(
-      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% tail(1) %>% .$rate %>% round(., 2) %>% as.character(), "%"), "ÇöÀç Àú¼öÀ²", icon = icon("thumbs-up"), color='blue'
+      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% tail(1) %>% .$rate %>% round(., 2) %>% as.character(), "%"), "í˜„ì¬ ì €ìˆ˜ìœ¨", icon = icon("thumbs-up"), color='blue'
     )
   })
   
   output$amount <- renderValueBox({
     valueBox(
-      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% tail(1) %>% .$amount %/% 1000 %>% as.character(), 'K'), "ÇöÀç Àú¼ö·®", icon = icon("thumbs-up"), color='purple'
+      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% tail(1) %>% .$amount %/% 1000 %>% as.character(), 'K'), "í˜„ì¬ ì €ìˆ˜ëŸ‰", icon = icon("thumbs-up"), color='purple'
     )
   })
   
   output$cum_flow <- renderValueBox({
     valueBox(
-      paste0(tmp_cumflow_data() %>% filter(year_group == '2020') %>% tail(1) %>% .$flow %/% 1000 %>% as.character(), 'K'), "ÇöÀç±îÁö ´©ÀûÀ¯·®", icon = icon("thumbs-up"), color='olive'
+      paste0(tmp_cumflow_data() %>% filter(year_group == '2020') %>% tail(1) %>% .$flow %/% 1000 %>% as.character(), 'K'), "í˜„ì¬ê¹Œì§€ ëˆ„ì ìœ ëŸ‰", icon = icon("thumbs-up"), color='olive'
     )
   })
   
   output$yesterday_rate <- renderValueBox({
     valueBox(
-      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$rate %>% round(., 2) %>% as.character(), "%"), "Àü³¯ Àú¼öÀ²", icon = icon("thumbs-up"), color='blue'
+      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$rate %>% round(., 2) %>% as.character(), "%"), "ì „ë‚  ì €ìˆ˜ìœ¨", icon = icon("thumbs-up"), color='blue'
     )
   })
   
   output$yesterday_amount <- renderValueBox({
     valueBox(
-      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$amount %/% 1000 %>% as.character(), 'K'), "Àü³¯ Àú¼ö·®", icon = icon("thumbs-up"), color='purple'
+      paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$amount %/% 1000 %>% as.character(), 'K'), "ì „ë‚  ì €ìˆ˜ëŸ‰", icon = icon("thumbs-up"), color='purple'
     )
   })
   
   output$yesterday_cum_flow <- renderValueBox({
     valueBox(
-      paste0(tmp_cumflow_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$flow %/% 1000 %>% as.character(), 'K'), "Àü³¯±îÁö ´©ÀûÀ¯·®", icon = icon("thumbs-up"), color='olive'
+      paste0(tmp_cumflow_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$flow %/% 1000 %>% as.character(), 'K'), "ì „ë‚ ê¹Œì§€ ëˆ„ì ìœ ëŸ‰", icon = icon("thumbs-up"), color='olive'
     )
   })
-
+  
   ### HighChart
   
   ### Reservior Water Rate plot
@@ -283,10 +428,10 @@ server = function(input, output)
         ) %>% 
         hc_tooltip(valueDecimals = 2) %>% 
         hc_add_theme(hc_theme_superheroes())
-      })
     })
+  })
   
-
+  
   observeEvent(input$month_checkbox, {
     cat("Month selectd! \n")
     if(input$month_checkbox){
@@ -303,7 +448,7 @@ server = function(input, output)
             labels = list(style = list(fontSize = 8)),
             categories = tmp_musu_data() %>% 
               filter(between(md, '08-01', '08-31')) %>% 
-                       .$md, type='datetime'
+              .$md, type='datetime'
           ) %>% 
           hc_add_series(
             tmp_musu_data() %>% 
@@ -413,7 +558,7 @@ server = function(input, output)
     }
     
   }, ignoreInit = TRUE)
-
+  
   ######### Tab Information ##########
   
   ### Highchart ###
@@ -440,7 +585,7 @@ server = function(input, output)
   output$geumgok1_musu_area_plot <- renderHighchart({
     highchart() %>%
       hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
-      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2020') & (area_category == '±İ°î')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
+      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2020') & (area_category == 'ê¸ˆê³¡')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
       hc_tooltip(valueDecimals = 2) %>%
       hc_add_theme(hc_theme_superheroes())
     
@@ -449,7 +594,7 @@ server = function(input, output)
   output$geumgok2_musu_area_plot <- renderHighchart({
     highchart() %>%
       hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
-      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2019') & (area_category == '±İ°î')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
+      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2019') & (area_category == 'ê¸ˆê³¡')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
       hc_tooltip(valueDecimals = 2) %>%
       hc_add_theme(hc_theme_superheroes())
     
@@ -458,7 +603,7 @@ server = function(input, output)
   output$geumgok3_musu_area_plot <- renderHighchart({
     highchart() %>%
       hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
-      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '°ú°Å Æò³â') & (area_category == '±İ°î')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
+      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == 'ê³¼ê±° í‰ë…„') & (area_category == 'ê¸ˆê³¡')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
       hc_tooltip(valueDecimals = 2) %>%
       hc_add_theme(hc_theme_superheroes())
     
@@ -467,7 +612,7 @@ server = function(input, output)
   output$heoijuk1_musu_area_plot <- renderHighchart({
     highchart() %>%
       hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
-      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2020') & (area_category == 'È¸Á×')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
+      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2020') & (area_category == 'íšŒì£½')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
       hc_tooltip(valueDecimals = 2) %>%
       hc_add_theme(hc_theme_superheroes())
     
@@ -476,7 +621,7 @@ server = function(input, output)
   output$heoijuk2_musu_area_plot <- renderHighchart({
     highchart() %>%
       hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
-      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2019') & (area_category == 'È¸Á×')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
+      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '2019') & (area_category == 'íšŒì£½')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
       hc_tooltip(valueDecimals = 2) %>%
       hc_add_theme(hc_theme_superheroes())
     
@@ -485,10 +630,73 @@ server = function(input, output)
   output$heoijuk3_musu_area_plot <- renderHighchart({
     highchart() %>%
       hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
-      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == '°ú°Å Æò³â') & (area_category == 'È¸Á×')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
+      hc_add_series(data = tmp_musu_area_data() %>% filter((year_group == 'ê³¼ê±° í‰ë…„') & (area_category == 'íšŒì£½')), hcaes(x = month, y = mean_flow, group = area), type = "column") %>%
       hc_tooltip(valueDecimals = 2) %>%
       hc_add_theme(hc_theme_superheroes())
     
+  })
+  
+  
+  ### Map Tap
+  
+  output$map = renderLeaflet({
+  leaflet(options = leafletOptions(zoomControl = FALSE,  minZoom = 13, maxZoom = 13)) %>%
+    setView(lat = 36.96362, lng = 127.43329, zoom = 13) %>%
+    addProviderTiles("CartoDB.Positron", options= providerTileOptions(opacity = 0.99)) %>%
+    addPolygons(data = polygon.musu,
+                stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = '#0072B5'
+    ) %>%
+    addPolylines(data = path.geumgok, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#926AA6') %>%
+    addPolylines(data = path.heoijuk, opacity = 0.7, dashArray = "5,5", weight = 4, color = '#264E36') %>%
+    addMarkers(data = geumgok_marker_df, layerId = ~Name, popup = ~htmlEscape(Name)) %>%
+    addMarkers(data = heoijuk_marker_df, layerId = ~Name, popup = ~htmlEscape(Name))
+
+  })
+  
+  area_name = 'íšŒì£½-ìƒë¶€'
+  
+  output$click_area_flow_plot <- renderHighchart({
+    highchart() %>%
+      hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
+      hc_add_series(data = tmp_click_area_flow_data() %>% filter(area %in% area_name), hcaes(x = month, y = mean_flow, group = year_group), type = "column") %>%
+      hc_tooltip(valueDecimals = 2) %>%
+      hc_add_theme(hc_theme_superheroes())
+  })
+  
+  output$click_area_cumflow_plot <- renderHighchart({
+    highchart() %>%
+      hc_xAxis(categories = tmp_click_area_cumflow_data()$md %>% unique(), type = 'datetime') %>%
+      hc_add_series(data = tmp_click_area_cumflow_data() %>% filter(area %in% area_name), hcaes(x = md, y = mean_flow, group = year_group), type = "line") %>%
+      hc_tooltip(valueDecimals = 2) %>%
+      hc_add_theme(hc_theme_superheroes())
+    })
+  
+  cl <- reactiveValues(clickedMarker=NULL)
+  
+  observeEvent(input$map_marker_click,{
+    
+    cl$clickedMarker <- input$map_marker_click
+    print(area_name)
+    print(cl$clickedMarker)
+    print(input$map_marker_click)
+    print(class(cl$clickedMarker$lat))
+    print(c(cl$clickedMarker$lat, cl$clickedMarker$lng))
+    output$click_area_flow_plot <- renderHighchart({
+      highchart() %>%
+        hc_xAxis(categories = c("04","05", "06", "07", "08", "09", "10")) %>%
+        hc_add_series(data = tmp_click_area_flow_data() %>% filter(area == cl$clickedMarker$id), hcaes(x = month, y = mean_flow, group = year_group), type = "column") %>%
+        hc_tooltip(valueDecimals = 2) %>%
+        hc_add_theme(hc_theme_superheroes())
+    })
+
+    output$click_area_cumflow_plot <- renderHighchart({
+      highchart() %>%
+        hc_xAxis(categories = tmp_click_area_cumflow_data()$md %>% unique(), type = 'datetime') %>%
+        hc_add_series(data = tmp_click_area_cumflow_data() %>% filter(area == cl$clickedMarker$id), hcaes(x = md, y = mean_flow, group = year_group), type = "line") %>%
+        hc_tooltip(valueDecimals = 2) %>%
+        hc_add_theme(hc_theme_superheroes())
+    })
+
   })
 
 }
