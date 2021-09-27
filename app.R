@@ -12,6 +12,8 @@ if(!require(DT)) install.packages('DT'); library(DT)
 if(!require(RcppRoll)) install.packages("RcppRoll"); library(RcppRoll)
 if(!require(data.table)) install.packages("data.table"); library(data.table)
 if(!require(leafpop)) install.packages("leafpop"); library(leafpop)
+if(!require(reticulate)) install.packages("reticulate"); library(reticulate)
+
 # if(!require()) install.packages(""); library()
 install.packages("raster")
 install.packages("sf")
@@ -21,7 +23,6 @@ install.packages("rgeos")
 install.packages("maptools")
 install.packages("gpclib", type="source")
 
-mapview
 library(mapview)
 library(raster)
 library(sf)
@@ -30,6 +31,7 @@ library(rgeos)
 library(maptools)
 library(gpclib)
 
+np <- import("numpy")
 
 setwd("~/Desktop/lab/새론솔루션/shiny/data")
 
@@ -145,10 +147,23 @@ musu_area_coord_data = data.frame(
   lat = c(36.97453, 36.96241, 36.95053, 36.97362, 36.96496, 36.94749),
   lng = c(127.43519, 127.43939, 127.44306, 127.42931, 127.42718, 127.42393)
   )
-# musu_area_coord_data$lng = format(musu_area_coord_data$lng, digits = 8 )
+# musu_area_coord_data$lng = format(musu_area_coord_data$lng, digits = 8 
+
+forecast_data =  np$load("forecast_value.npy")/1370 * 100
+
+forecast_df = data.frame(
+  date = c(rev(seq(musu_data$date[nrow(musu_data)], by = "-1 day", length.out = 10)[-1]), seq(musu_data$date[nrow(musu_data)], by = "day", length.out = 6)),
+  rate = NA,
+  year_group = 'forecast'
+) %>% mutate(md = format(date, "%m-%d"))
+
+forecast_df[10,'rate'] = musu_data$rate %>% tail(1)
+forecast_df[-c(1:10), 'rate'] = forecast_data
+
+forecast_df = within(forecast_df, year_group <- factor(year_group, levels=c("2020", "2019", "과거 평년", 'forecast')))
 
 #### header ####
-header = dashboardHeader(title = 'Test dashboard')
+header = dashboardHeader(title = tags$img(src='https://user-images.githubusercontent.com/37679460/134848905-56402ff4-2cba-4b5d-b24e-cbadf469c36c.png', height = '60', width ='140'))
 
 #### sidebar ####
 sidebar = dashboardSidebar(
@@ -183,50 +198,50 @@ body = dashboardBody(
                      valueBoxOutput("yesterday_rate"),
                      valueBoxOutput("yesterday_amount"),
                      valueBoxOutput("yesterday_cum_flow")
-              )
+                )
             ),
             fluidRow(
-              column(width = 6,
+              column(
+                width = 4, 
+                dateRangeInput("water_rate_date", label= h4("데이터 기간:"), start = "2020-01-01", end = "2020-12-31", min = "2020-01-01", max ="2020-12-31", width = "85%" )
+                ), 
+              column(
+                width = 2,
+                h4('월별 그래프'),
+                checkboxInput('month_checkbox', "Month", FALSE)
+                )
+            ),
+            fluidRow(
+              column(width = 4,
+                     h3('저수율'),
                      box(
                        width = 12,
-                       h3('저수율'),
                        status = 'primary',
                        highchartOutput(
                          'water_rate_plot'
                        )
                      )
-              ),
-              column(width = 6,
+                  ),
+              column(width = 4,
+                     h3('누적 유량'),
                      box(
                        width = 12,
-                       h3('누적 유량'),
                        status = 'primary',
                        highchartOutput(
                          'cumulative_flow_plot'
                        )
                      )
-              )
-            ),
-            fluidRow(
+                  ), 
               column(
-                width = 3,
-                offset = 1,
-                dateRangeInput("water_rate_date", label= "Date range:", start = "2020-01-01", end = "2020-12-31", min = "2020-01-01", max ="2020-12-31")
-              ),
-              column(
-                width = 2,
-                h4("월별 그래프"),
-                checkboxInput('month_checkbox', "Month", FALSE)
-              ),
-              column(
-                width = 3,
-                offset = 1,
-                dateRangeInput("cum_flow_date", label= "Date range:", start = "2020-01-01", end = "2020-12-31", min = "2020-01-01", max ="2020-12-31")
-              ), 
-              column(
-                width = 2,
-                h4("월별 그래프"),
-                checkboxInput('flow_month_checkbox', "Month", FALSE)
+                width = 4,
+                h3('단기 예측 저수율'),
+                box(
+                  width = 12,
+                  status = 'primary',
+                  highchartOutput(
+                    'forecasting_ratio_plot'
+                  )
+                )
               )
             )
     ),
@@ -355,6 +370,16 @@ server = function(input, output)
     musu_area_coord_data
   })
   
+  tmp_forecast_df = reactive({
+    tmp_date = forecast_df$md
+    
+    musu_data %>% filter(md %in% tmp_date) %>% 
+      dplyr::select(date, rate, year_group, md) %>% 
+      bind_rows(forecast_df) %>% 
+      group_by(year_group, md) %>% 
+      summarise(mean_rate = mean(rate))
+  })
+  
   ######## Tab Home ##########
   
   ### Value Box
@@ -415,7 +440,7 @@ server = function(input, output)
           labels = list(style = list(fontSize = 8)),
           categories = tmp_musu_data() %>% 
             filter(between(md, start, end)) %>% 
-            .$md, type='datetime'
+            .$md %>% unique(), type='datetime'
         ) %>% 
         hc_add_series(
           tmp_musu_data() %>% 
@@ -444,7 +469,7 @@ server = function(input, output)
             labels = list(style = list(fontSize = 8)),
             categories = tmp_musu_data() %>% 
               filter(between(md, '08-01', '08-31')) %>% 
-              .$md, type='datetime'
+              .$md %>% unique(), type='datetime'
           ) %>% 
           hc_add_series(
             tmp_musu_data() %>% 
@@ -467,7 +492,7 @@ server = function(input, output)
           ) %>% 
           hc_xAxis(
             labels = list(style = list(fontSize = 8)),
-            categories = tmp_musu_data()$md, type='datetime'
+            categories = tmp_musu_data()$md %>% unique(), type='datetime'
           ) %>% 
           hc_add_series(
             tmp_musu_data(),
@@ -483,8 +508,8 @@ server = function(input, output)
   
   ###Cumulative flow plot
   
-  observeEvent(input$cum_flow_date, {
-    cum_flow_dates <- input$cum_flow_date
+  observeEvent(input$water_rate_date, {
+    cum_flow_dates <- input$water_rate_date
     cum_flow_date_start <- format(cum_flow_dates[1], '%m-%d')
     cum_flow_date_end <- format(cum_flow_dates[2], '%m-%d')
     
@@ -497,7 +522,7 @@ server = function(input, output)
           labels = list(style = list(fontSize = 8)),
           categories = tmp_cumflow_data() %>% 
             filter(between(md, cum_flow_date_start, cum_flow_date_end)) %>% 
-            .$md, type='datetime'
+            .$md %>% unique(), type='datetime'
         ) %>% 
         hc_add_series(
           tmp_cumflow_data() %>% 
@@ -510,9 +535,9 @@ server = function(input, output)
     })
   })
   
-  observeEvent(input$flow_month_checkbox, {
+  observeEvent(input$month_checkbox, {
     cat("Month selectd! \n")
-    if(input$flow_month_checkbox){
+    if(input$month_checkbox){
       output$cumulative_flow_plot <- renderHighchart({
         highchart() %>% 
           hc_yAxis(
@@ -522,7 +547,7 @@ server = function(input, output)
             labels = list(style = list(fontSize = 8)),
             categories = tmp_cumflow_data() %>% 
               filter(between(md, '08-01', '08-31')) %>% 
-              .$md, type='datetime'
+              .$md %>% unique(), type='datetime'
           ) %>% 
           hc_add_series(
             tmp_cumflow_data() %>% 
@@ -541,7 +566,7 @@ server = function(input, output)
           ) %>% 
           hc_xAxis(
             labels = list(style = list(fontSize = 8)),
-            categories = tmp_cumflow_data()$md, type='datetime'
+            categories = tmp_cumflow_data()$md %>% unique(), type='datetime'
           ) %>% 
           hc_add_series(
             tmp_cumflow_data(),
@@ -554,6 +579,26 @@ server = function(input, output)
     }
     
   }, ignoreInit = TRUE)
+  
+  #### forecast plot ####
+  output$forecasting_ratio_plot <- renderHighchart({
+    highchart() %>% 
+      hc_yAxis(
+        title=list(text = "Reservior Rate")
+      ) %>% 
+      hc_xAxis(
+        labels = list(style = list(fontSize = 8)),
+        categories = tmp_forecast_df()$md %>% unique(), # type='datetime',
+        plotLines = list(list(value = 9, color = "red", width = 2, dashStyle = "dash"))
+      ) %>% 
+      hc_add_series(
+        tmp_forecast_df(),
+        type='line',
+        hcaes(x=md, y=mean_rate, group=year_group)
+      ) %>% 
+      hc_tooltip(valueDecimals = 2) %>% 
+      hc_add_theme(hc_theme_superheroes())
+  })
   
   ######### Tab Information ##########
   
@@ -665,10 +710,11 @@ server = function(input, output)
   #     addAwesomeMarkers(data = heoijuk_marker_df, layerId = ~Name, popup = paste(sep = '<br/>', musu_area_coord_data$name[4:6], popupImage(img_path[4:6], width=100, height=100)))
   #   
   # })
+
   output$map = renderLeaflet({
     leaflet(options = leafletOptions(zoomControl = FALSE,  minZoom = 13, maxZoom = 13)) %>%
       setView(lat = 36.96362, lng = 127.43329, zoom = 13) %>%
-      addProviderTiles("CartoDB.Positron", options= providerTileOptions(opacity = 0.99)) %>%
+      addProviderTiles("Esri.WorldTopoMap", options= providerTileOptions(opacity = 0.99)) %>% 
       addPolygons(data = polygon.musu,
                   stroke = FALSE, fillOpacity = 0.5, smoothFactor = 0.5, color = '#0072B5'
       ) %>%
