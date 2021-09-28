@@ -1,5 +1,5 @@
 # shiny
-shiny, shinydashboard, highcharter and leaflet 
+shinydashboard, highcharter and leaflet 
 
 - Home tab
 <img width = "600" heigth = "500" src = https://user-images.githubusercontent.com/37679460/135050739-39fd3b41-be8d-4a2b-b1da-89e30dc2b341.png>
