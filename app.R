@@ -35,6 +35,7 @@ np <- import("numpy")
 
 setwd("~/Desktop/lab/새론솔루션/shiny/data")
 
+#### 지도 shape 파일 ####
 musu_kml = st_read("musu.kml")
 
 musu_kml_n <- st_zm(musu_kml[1], drop=T, what='ZM')
@@ -92,9 +93,7 @@ heoijuk_marker_df = rbind(marker.heoijuk1, marker.heoijuk2, marker.heoijuk3)
 
 heoijuk_marker_df$Name = c("회죽-상부", "회죽-중부", "회죽-하부")
 
-# setwd("C:/Users/chica/Desktop/rshiny/data")
-# data = fread("吏꾩쿇_媛뺤닔?웾_1999_2020.csv") %>% as_tibble()
-
+#### musu data  ####
 musu_data = readxl::read_xlsx('무수저수지 데이터셋.xlsx')
 
 colnames(musu_data) = c('date', 'amount', 'rate', 'geumgok1', 'geumgok2', 'geumgok3', 
@@ -147,7 +146,6 @@ musu_area_coord_data = data.frame(
   lat = c(36.97453, 36.96241, 36.95053, 36.97362, 36.96496, 36.94749),
   lng = c(127.43519, 127.43939, 127.44306, 127.42931, 127.42718, 127.42393)
   )
-# musu_area_coord_data$lng = format(musu_area_coord_data$lng, digits = 8 
 
 forecast_data =  np$load("forecast_value.npy")/1370 * 100
 
@@ -161,6 +159,30 @@ forecast_df[10,'rate'] = musu_data$rate %>% tail(1)
 forecast_df[-c(1:10), 'rate'] = forecast_data
 
 forecast_df = within(forecast_df, year_group <- factor(year_group, levels=c("2020", "2019", "과거 평년", 'forecast')))
+
+#### 강수량 & 가뭄지수 ####
+
+prec_df = read_excel('강수량_1999-2020.xls')
+
+prec_df = prec_df %>% dplyr::select(관측일, 금년일강수량) %>%
+  plyr::rename(c('관측일' = 'date', '금년일강수량' = 'prec')) %>% 
+  mutate(date = as.Date(date),
+         prec = as.numeric(prec),
+         md = format(date, "%m-%d")) %>% 
+  filter(date <= as.Date('2020-08-31'))
+
+# 평년 시나리오
+future_mean_prec_df = prec_df %>% 
+  group_by(md) %>% 
+  summarise(prec = mean(prec, na.rm=T)) %>%
+  mutate(date = as.Date(paste0("2020-", md))) %>% 
+  dplyr::select(date, prec, md)
+
+ # 무강수 시나리오
+future_zero_prec_df = future_mean_prec_df %>% mutate(prec = if_else(md > "08-31", 0, prec))
+
+mean_prec_df = prec_df %>% bind_rows(future_mean_prec_df) %>% distinct(date, .keep_all = T) %>% arrange(date)
+zero_prec_df = prec_df %>% bind_rows(future_zero_prec_df) %>% distinct(date, .keep_all = T) %>% arrange(date)
 
 #### header ####
 header = dashboardHeader(title = tags$img(src='https://user-images.githubusercontent.com/37679460/134848905-56402ff4-2cba-4b5d-b24e-cbadf469c36c.png', height = '60', width ='140'))
@@ -271,16 +293,50 @@ body = dashboardBody(
     ########### Inform ############
     tabItem(tabName = "Information",
             fluidRow(
-              tabBox(
-                title = "저수지 유량",
-                side = "right",
-                selected = "유량",
-                tabPanel("유량", highchartOutput('monthly_flow_plot')),
-                tabPanel("누적 유량", highchartOutput('monthly_cumflow_plot'))
+              column(
+                width = 6,
+                tabBox(
+                  width = 12,
+                  title = "저수지 유량",
+                  side = "right",
+                  selected = "유량",
+                  tabPanel("유량", highchartOutput('monthly_flow_plot')),
+                  tabPanel("누적 유량", highchartOutput('monthly_cumflow_plot'))
+                )
+              ),
+              column(
+                width = 6,
+                box(
+                  width = 12,
+                  title = "가뭄지수(SPI)",
+                  status = 'primary',
+                  highchartOutput('spi_plot')
+                )
+              )
+            ),
+            fluidRow(
+              h2("강수 시나리오 가뭄지수"),
+              column(
+                width = 6,
+                box(
+                  width = 12,
+                  title = "평년강수 시나리오 가뭄지수(SPI)",
+                  status = 'primary',
+                  highchartOutput('mean_spi_plot')
+                  )
+                ),
+              column(
+                width = 6,
+                box(
+                  width = 12,
+                  title = "무강수 시나리오 가뭄지수(SPI)",
+                  status = 'primary',
+                  highchartOutput('zero_spi_plot')
+                )
               )
             )
     ),
-    
+
     ############ Map #############
     tabItem(tabName = "Map",
       fluidPage(
@@ -334,7 +390,7 @@ body = dashboardBody(
 #### server ####
 server = function(input, output) 
 {
-  ### Reactive DATA
+  #### Reactive Data ####
   tmp_musu_data = reactive({
     musu_data %>% 
       group_by(year_group, md) %>% 
@@ -348,11 +404,72 @@ server = function(input, output)
       summarise_at(vars(`금곡-상부`:`회죽-하부`, flow, repi), mean)
   })
   
-  spi_reactive = reactive({
-    data %>%
+  spi_data = reactive({
+    
+    # 누적합 계산
+    tmp_prec_df = mean_prec_df %>% filter(date <= "2020-08-31")
+    
+    cum_prec_df = data.frame(date=tmp_prec_df$date, precip=tmp_prec_df$prec, 
+                             cum_30=RcppRoll::roll_sum(tmp_prec_df$prec, 30, fill=NA, align="right"),
+                             cum_60=RcppRoll::roll_sum(tmp_prec_df$prec, 60, fill=NA, align="right"),
+                             cum_90=RcppRoll::roll_sum(tmp_prec_df$prec, 90, fill=NA, align="right"))
+    
+    cum_prec_df = cum_prec_df %>% filter(date >= as.Date('2000-01-01'))
+    
+    a_hat1 = 0.5 / (log(mean(cum_prec_df$cum_30))- mean(log(cum_prec_df$cum_30 + 0.00001))); b_hat1 = mean(cum_prec_df$cum_30) / a_hat1
+    a_hat2 = 0.5 / (log(mean(cum_prec_df$cum_60))- mean(log(cum_prec_df$cum_60 + 0.00001))); b_hat2 = mean(cum_prec_df$cum_60) / a_hat2
+    a_hat3 = 0.5 / (log(mean(cum_prec_df$cum_90))- mean(log(cum_prec_df$cum_90 + 0.00001))); b_hat3 = mean(cum_prec_df$cum_90) / a_hat3
+    
+    cum_prec_df %>% mutate(SPI30 = cal_spi(cum_prec_df$cum_30, a_hat1, b_hat1),
+                           SPI60 = cal_spi(cum_prec_df$cum_60, a_hat2, b_hat2),
+                           SPI90 = cal_spi(cum_prec_df$cum_90, a_hat3, b_hat3),
+                           md = format(date, "%m-%d")) %>% 
       filter(date >= "2020-01-01") %>%
       gather(spi_type, spi_value, starts_with('SPI'))
   })
+  
+  mean_spi_data = reactive({
+    cum_prec_df = data.frame(date = mean_prec_df$date, precip=mean_prec_df$prec, 
+                             cum_30=RcppRoll::roll_sum(mean_prec_df$prec, 30, fill=NA, align="right"),
+                             cum_60=RcppRoll::roll_sum(mean_prec_df$prec, 60, fill=NA, align="right"),
+                             cum_90=RcppRoll::roll_sum(mean_prec_df$prec, 90, fill=NA, align="right"))
+    
+    cum_prec_df = cum_prec_df %>% filter(date >= as.Date('2000-01-01'))
+    
+    a_hat1 = 0.5 / (log(mean(cum_prec_df$cum_30))- mean(log(cum_prec_df$cum_30 + 0.00001))); b_hat1 = mean(cum_prec_df$cum_30) / a_hat1
+    a_hat2 = 0.5 / (log(mean(cum_prec_df$cum_60))- mean(log(cum_prec_df$cum_60 + 0.00001))); b_hat2 = mean(cum_prec_df$cum_60) / a_hat2
+    a_hat3 = 0.5 / (log(mean(cum_prec_df$cum_90))- mean(log(cum_prec_df$cum_90 + 0.00001))); b_hat3 = mean(cum_prec_df$cum_90) / a_hat3
+    
+    cum_prec_df %>% mutate(SPI30 = cal_spi(cum_prec_df$cum_30, a_hat1, b_hat1),
+                           SPI60 = cal_spi(cum_prec_df$cum_60, a_hat2, b_hat2),
+                           SPI90 = cal_spi(cum_prec_df$cum_90, a_hat3, b_hat3),
+                           md = format(date, "%m-%d")) %>% 
+      filter(date >= "2020-01-01") %>%
+      gather(spi_type, spi_value, starts_with('SPI'))
+ 
+  })
+  
+  zero_spi_data = reactive({
+    cum_prec_df = data.frame(date = zero_prec_df$date, precip=zero_prec_df$prec, 
+                             cum_30=RcppRoll::roll_sum(zero_prec_df$prec, 30, fill=NA, align="right"),
+                             cum_60=RcppRoll::roll_sum(zero_prec_df$prec, 60, fill=NA, align="right"),
+                             cum_90=RcppRoll::roll_sum(zero_prec_df$prec, 90, fill=NA, align="right"))
+    
+    cum_prec_df = cum_prec_df %>% filter(date >= as.Date('2000-01-01'))
+    
+    a_hat1 = 0.5 / (log(mean(cum_prec_df$cum_30))- mean(log(cum_prec_df$cum_30 + 0.00001))); b_hat1 = mean(cum_prec_df$cum_30) / a_hat1
+    a_hat2 = 0.5 / (log(mean(cum_prec_df$cum_60))- mean(log(cum_prec_df$cum_60 + 0.00001))); b_hat2 = mean(cum_prec_df$cum_60) / a_hat2
+    a_hat3 = 0.5 / (log(mean(cum_prec_df$cum_90))- mean(log(cum_prec_df$cum_90 + 0.00001))); b_hat3 = mean(cum_prec_df$cum_90) / a_hat3
+    
+    cum_prec_df %>% mutate(SPI30 = cal_spi(cum_prec_df$cum_30, a_hat1, b_hat1),
+                           SPI60 = cal_spi(cum_prec_df$cum_60, a_hat2, b_hat2),
+                           SPI90 = cal_spi(cum_prec_df$cum_90, a_hat3, b_hat3),
+                           md = format(date, "%m-%d")) %>% 
+      filter(date >= "2020-01-01") %>%
+      gather(spi_type, spi_value, starts_with('SPI'))
+    
+  })
+  
   
   tmp_flow_data = reactive({
     flow_data
@@ -402,6 +519,8 @@ server = function(input, output)
       group_by(year_group, md) %>% 
       summarise(mean_rate = mean(rate))
   })
+  
+  
   
   ######## Tab Home ##########
   
@@ -639,6 +758,66 @@ server = function(input, output)
   
   ######### Tab Information ##########
   
+  output$spi_plot <- renderHighchart({
+    highchart() %>% 
+      hc_yAxis(
+        title=list(text="SPI index"),
+        plotLines = list(list(value = -1, color = "red", width = 2,
+                              dashStyle = "shortdash"))
+      ) %>% 
+      hc_xAxis(
+        categories = spi_data()$md %>% unique(), type='datetime'
+      ) %>% 
+      hc_add_series(
+        spi_data(),
+        type='line',
+        hcaes(x=md, y=spi_value, group=spi_type)
+      ) %>% 
+      hc_tooltip(valueDecimals = 2) %>% 
+      hc_add_theme(hc_theme_superheroes())
+  })
+  
+  output$mean_spi_plot <- renderHighchart({
+    highchart() %>% 
+      hc_yAxis(
+        title=list(text="SPI index"),
+        plotLines = list(list(value = -1, color = "red", width = 2,
+                              dashStyle = "shortdash"))
+      ) %>% 
+      hc_xAxis(
+        categories = mean_spi_data()$md %>% unique(), type='datetime',
+        plotLines = list(list(value = 243, color = "yellow", width = 2, dashStyle = "dash")) # value 수정 필요
+      ) %>% 
+      hc_add_series(
+        mean_spi_data(),
+        type='line',
+        hcaes(x=md, y=spi_value, group=spi_type)
+      ) %>% 
+      hc_tooltip(valueDecimals = 2) %>% 
+      hc_add_theme(hc_theme_superheroes())
+  })
+  
+  output$zero_spi_plot <- renderHighchart({
+    highchart() %>% 
+      hc_yAxis(
+        title=list(text="SPI index"),
+        plotLines = list(list(value = -1, color = "red", width = 2,
+                              dashStyle = "shortdash"))
+      ) %>% 
+      hc_xAxis(
+        categories = zero_spi_data()$md %>% unique(), type='datetime',
+        plotLines = list(list(value = 243, color = "yellow", width = 2, dashStyle = "dash")) # value 수정 필요
+      ) %>% 
+      hc_add_series(
+        zero_spi_data(),
+        type='line',
+        hcaes(x=md, y=spi_value, group=spi_type)
+      ) %>% 
+      hc_tooltip(valueDecimals = 2) %>% 
+      hc_add_theme(hc_theme_superheroes())
+  })
+  #### Map Tap #####
+  
   ### Highchart ###
   
   output$monthly_flow_plot <- renderHighchart({
@@ -714,9 +893,6 @@ server = function(input, output)
     
   })
   
-  
-  #### Map Tap #####
-
   image_geumgok_path = paste0(getwd(), list.files("../image_file")[1:3])
   image_heoijuk_path = paste0(getwd(), list.files("../image_file")[4:6])
   
