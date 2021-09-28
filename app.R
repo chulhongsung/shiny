@@ -186,19 +186,42 @@ body = dashboardBody(
   ############ Home #############
   tabItems(
     tabItem(tabName = "Home",
-            h3("저수지 상황"),
+            h3("저수지 상황판"),
             fluidRow(
-              column(width = 12,
-                     valueBoxOutput("rate"),
-                     valueBoxOutput("amount"),
-                     valueBoxOutput("cum_flow"))
+              column(
+                width = 3,
+                valueBoxOutput("rate", width = 12)
+                ),
+              column(
+                width = 3,
+                valueBoxOutput("amount", width = 12)
+               ),
+              column(
+                width = 3, 
+                valueBoxOutput("cum_flow", width = 12)
+              ),
+              column(
+                width = 3,
+                valueBoxOutput("prec", width = 12)
+              )
             ),
             fluidRow(
-              column(width=12,
-                     valueBoxOutput("yesterday_rate"),
-                     valueBoxOutput("yesterday_amount"),
-                     valueBoxOutput("yesterday_cum_flow")
-                )
+              column(
+                width = 3,
+                valueBoxOutput("yesterday_rate", width = 12)
+              ),
+              column(
+                width = 3,
+                valueBoxOutput("yesterday_amount", width = 12)
+              ),
+              column(
+                width = 3, 
+                valueBoxOutput("yesterday_cum_flow", width = 12)
+              ),
+              column(
+                width = 3,
+                valueBoxOutput("yesterday_prec", width = 12)
+              )
             ),
             fluidRow(
               column(
@@ -401,6 +424,13 @@ server = function(input, output)
     )
   })
   
+  output$prec <- renderValueBox({
+    valueBox(
+      "5mm", "어제 강수량", icon = icon("thumbs-up"), color='olive'
+    )
+  })
+  
+  
   output$yesterday_rate <- renderValueBox({
     valueBox(
       paste0(tmp_musu_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$rate %>% round(., 2) %>% as.character(), "%"), "전날 저수율", icon = icon("thumbs-up"), color='blue'
@@ -418,6 +448,13 @@ server = function(input, output)
       paste0(tmp_cumflow_data() %>% filter(year_group == '2020') %>% slice(n()-1) %>% .$flow %/% 1000 %>% as.character(), 'K'), "전날까지 누적유량", icon = icon("thumbs-up"), color='olive'
     )
   })
+  
+  output$yesterday_prec <- renderValueBox({
+    valueBox(
+      "5mm", "엊그제 강수량", icon = icon("thumbs-up"), color='olive'
+    )
+  })
+  
   
   ### HighChart
   
