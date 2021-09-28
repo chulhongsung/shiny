@@ -14,23 +14,6 @@ if(!require(data.table)) install.packages("data.table"); library(data.table)
 if(!require(leafpop)) install.packages("leafpop"); library(leafpop)
 if(!require(reticulate)) install.packages("reticulate"); library(reticulate)
 
-# if(!require()) install.packages(""); library()
-install.packages("raster")
-install.packages("sf")
-install.packages("rgdal")
-#install.packages("dplyr")
-install.packages("rgeos")
-install.packages("maptools")
-install.packages("gpclib", type="source")
-
-library(mapview)
-library(raster)
-library(sf)
-library(rgdal)
-library(rgeos)
-library(maptools)
-library(gpclib)
-
 np <- import("numpy")
 
 setwd("~/Desktop/lab/새론솔루션/shiny/data")
@@ -42,16 +25,12 @@ musu_kml_n <- st_zm(musu_kml[1], drop=T, what='ZM')
 as.data.frame(musu_kml_n) -> musu_kml.df
 as(musu_kml_n, "Spatial") -> polygon.musu
 
-# st_write(jkt_n, dsn= "jakarta", driver= "ESRI Shapefile",'jkt.shp')
-# ams_ll <- spTransform(polygon.musu, CRS("+init=epsg:4326"))
 heoijuk_kml = st_read("heoijuk.kml")
-
 heoijuk_kml_n <- st_zm(heoijuk_kml[1], drop=T, what='ZM')
 as.data.frame(heoijuk_kml_n) -> heoijuk_kml.df
 as(heoijuk_kml_n , "Spatial") -> path.heoijuk
 
 geumgok_kml = st_read("geumgok.kml")
-
 geumgok_kml_n <- st_zm(geumgok_kml[1], drop=T, what='ZM')
 as.data.frame(geumgok_kml_n) -> geumgok_kml.df
 as(geumgok_kml_n, "Spatial") -> path.geumgok
@@ -183,6 +162,11 @@ future_zero_prec_df = future_mean_prec_df %>% mutate(prec = if_else(md > "08-31"
 
 mean_prec_df = prec_df %>% bind_rows(future_mean_prec_df) %>% distinct(date, .keep_all = T) %>% arrange(date)
 zero_prec_df = prec_df %>% bind_rows(future_zero_prec_df) %>% distinct(date, .keep_all = T) %>% arrange(date)
+
+cal_spi = function(df, a_hat, b_hat){
+  return(qnorm(pgamma(df+0.00001, shape=a_hat, scale=b_hat)))
+}
+
 
 #### header ####
 header = dashboardHeader(title = tags$img(src='https://user-images.githubusercontent.com/37679460/134848905-56402ff4-2cba-4b5d-b24e-cbadf469c36c.png', height = '60', width ='140'))
