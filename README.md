@@ -1,5 +1,5 @@
 # shiny
 shiny, shinydashboard, highcharter and leaflet 
 
-<img width = "600" heigth = "500" src = https://user-images.githubusercontent.com/37679460/134661268-3ed6764d-ba70-4623-9053-c10047f4fcd7.png>
-<img width = "600" heigth = "500" src = https://user-images.githubusercontent.com/37679460/134661287-002b7a8b-0d23-4c98-9e2a-7bc72917dace.png>
+<img width = "600" heigth = "500" src = https://user-images.githubusercontent.com/37679460/135027392-2a417508-a515-4041-9fb6-e0e19c41f49d.png>
+<img width = "600" heigth = "500" src = https://user-images.githubusercontent.com/37679460/135027399-d9c97743-4f2f-4d70-bb65-a0f269eb5eb0.png>
