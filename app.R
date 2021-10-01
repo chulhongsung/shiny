@@ -13,10 +13,15 @@ if(!require(RcppRoll)) install.packages("RcppRoll"); library(RcppRoll)
 if(!require(data.table)) install.packages("data.table"); library(data.table)
 if(!require(leafpop)) install.packages("leafpop"); library(leafpop)
 if(!require(reticulate)) install.packages("reticulate"); library(reticulate)
+if(!require(readxl)) install.packages("readxl"); library(readxl)
+if(!require(sf)) install.packages("sf"); library(sf)
+
+### data path: shiny_data path, ex) "./Desktop/lab/shiny_data/"
+data_path = "/Users/chulhongsung/Desktop/lab/새론솔루션/shiny/data" 
 
 np <- import("numpy")
 
-setwd("~/Desktop/lab/새론솔루션/shiny/data")
+setwd(data_path)
 
 #### 지도 shape 파일 ####
 musu_kml = st_read("musu.kml")
@@ -972,3 +977,4 @@ ui = dashboardPage(
 )
 
 shinyApp(ui, server)
+
